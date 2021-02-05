@@ -1,0 +1,168 @@
+---
+title: "Shell Commands"
+author: "Samantha Kreling"
+date: "1/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*>>* append to file 
+
+*>* overwrite file
+
+## Remote access
+
+*ssh* = remote access to machine directory
+
+*skreling@remoteserver directory* = how to access remote server, preceeded by ssh
+
+
+To move files from local to remote server: pwd of directory where you want to move data to and copy the path. *rsynch* will be the command to actually move files to the remote server
+## Reproducibility 
+
+*rsynch -apv filename remoteserverpath:/pathonserver* to move a file up to a remote server. to move a file replace file name with foldername/
+
+*{directory}Program -version* = gives the version number for the given program which resides in a given directory
+
+## Organization
+
+*\* tends to help for readability! Allows you to separate out commands so that they aren't all in one line and you can see all the parameters that you enter on separate lines 
+
+
+## Directories
+
+*mkdir* = make directory, used to create new files and directories
+*ls -l* = long list of files within directory with some file details
+*pwd* = print working directory
+*cd* = change directory
+## Viewing data
+
+*tail -F* = Allows for monitoring real time, outputs the lines as they get committed by another program such as Blastx
+
+*head* 
+
+*dif* = output give differneces between files
+
+*md5sum* = check sum to see if two files are the same
+
+## Sequence Selection
+
+*obigrep* Argument 'thing of interest' input file > output file 
+
+- -s gives the sequnece option 
+- -D regular expression pattern to be tested against the definion of the sequnce record (case sensitive)
+- -I regular expression pattern to be tested against the identifier fo the sequence record (case sensitive)
+- -a regular expression pattern matched against the attributes of sequence record. the value of this attribute is of the form: key:regular_pattern. (case sensitive)
+- -A selects sequences records having an attribute whose key = <KEY>
+- -p: python boolean expression to be evaluated for each sequence record. The attribute keys defined for each sequnece record can be used in the expression as variable names. An extra variable named 'sequence' refers to the sequence record itself. several -p otpions can be used on the same command line and in this last case, the selected sequence recrods will match all constraints
+- -L keeps records with sequence length equal or shorter than lmax
+- -l keeps recrods >= lmin
+- -v inverse sequence selection 
+
+#### Exampes: 
+
+- obigrep -s 'GAATTC' seq1.fasta > seq2.fasta: selects only the sequence records that contain an EcoRI restriction site
+- obigrep -s 'A{10,}' seq1.fasta > seq2.fasta: selects only the sequence records that contain a stretch of at least 10As
+- obigrep -s 'carrot[ACGT]+$' seq1.fasta > seq2.fasta: selects only teh sequence records that do not contain ambiguous nucleotides
+- obigrep -D '[Cc]hloroplast' seq1.fasta > seq2.fasta: selects only the sequence records that do not contain ambiguous nucleotides
+- obigrep -I '^GH' seq1.fasta > seq2.fasta: selects only the sequence records whose identifier begins with GH
+- obigrep -a 'family_name:Asteraceae' seq1.fasta > seq2.fasta: selects the sequence records containing an attribute whose key is family_name and value is Asteraceae
+- obigrep -A taxid seq1.fasta > seq2.fasta: selects only the sequence records having a taxid attribute
+- obigrep -p '(forward_error<2) and (reverse_error<2)' \ seq1.fasta > seq2.fasta: selects only the sequence reocrds whose forward_error and reverse_error attributes have a value < 2
+- obigrep -L 100 seq1.fasta > seq2.fasta: selects seqnce length equal or shorter than 100bp
+- obigrep -l 100 seq1.fasta > seq2.fasta: selects sequence length equal or longer than 100 bp
+
+# Fastq Quality Control
+
+## Counting Fastq entries
+
+*wc -l file.fastq* divided by 4 or the number of lines in your file
+*bioawk -cfastx 'END{print NR}' file.fastq* for when you are certain there are 4 lines for each entry only
+
+## Phred Quality Scores
+*[ord(b) for b in ASCIIthred]* = converts line of ASCII values to scores
+*phred = [ord(b)-33 for b in qual]* = generates an equation to scale look at phred lines
+*[qo**(-q/10) for q in phred]* = generates probabilities of each base being correct
+
+## Inspecting and trimming low-quality bases
+
+
+*siqtk* = general-purpose sequence toolkit - install via brew isntall seqtk 
+*sickle* = another sequence toolkit - install via brew install sickle
+
+*sickle se -f file.fastq -t sanger -o file_sickle.fq* = trim the original fastq file, -f is the input file, -t is the quality type, and -o is the output file
+*seqtk trimfq file.fastq > file_trim.fastq* = trims the sequences with one command
+```{r}
+# Uses qrqc to collect the distribtuions of quality by possition in the siqtk and sickle trimmed files
+library(BiocInstaller)
+bioclite('qrqc') #a bioconductor package
+
+#FASTQ files
+fqfiles <- c(none="file.fastq",
+             sickle = "file_sickle.fastq",
+             trimfq = "file_trim.fastq")
+# Load each file in, using qrqc's readSeqFile
+# We only need qualities, so we turn off some of readSeqFile's other features
+seq_info <- lapply(fqfiles, function(file){
+  readSeqFile(file, hash=F, kmer=F)
+})
+# Extract the qualities as dataframe and append a column of which trimmer (or none) was used. This is used in alter plots
+quals <- mapply(function(sfq, name){
+  qs <- getQual(sfq)
+  qs$trimmer <- name
+  qs
+  }, seq_info, names(fqfiles), SIMPLIFY=F)
+
+# Combine separate dataframes in a list into single dataframe
+d <- do.call(rbind, quals)
+
+#Visualize qualities
+p1 <- ggplot(d) + geom_line(aes(x=position, y=mean, lintype=trimmer))
+p1 <- p1 + ylab("mean quality (sanger)") + theme_bw()
+print(p1)
+
+# Use qrqc's qualPlot with list produces panel plots, only shows 10% to 90% quantiles and lowess curve
+p2 <- qualPlot(seq_info, quartil.color=NULL, mean.color=NULL)+theme_bw()
+p2 <- p2+scale_y_continuous("quality (sanger)")
+print(p2)
+
+## genearlly shows an increase in mean quality reads across read after trimming, but still an overall decline in base quality over the length of reads
+
+```
+
+## Counting Nucleotides
+
+### Popular Libraries
+*BioPerl*
+*Biopython*
+*python readfq*
+
+### Program to count number of each IUPAC nucleotide in a file:
+#!/usr/bin/env python
+#nuccount.py -- tally nucleotides in a file
+import sys
+from collections import Counter
+from readfq import readfq
+
+IUPAC_BASES = "AGCTRYSWKMBDHVN-."
+
+#initialize counter
+counts = Counter()
+
+for name, seq, qual in readfq(sys.stdin):
+#for each sequence entry, add all its bases to the counter
+counts.update(seq.upper())
+for bas in IUPAC_BASES:
+  print base + "\t" + str(counts[base])
+  
+## Indexing Fastq files
+
+*samtools faidx file.fastq* = creates an index file named file.fastq.fai
+*samtools faidx <file.fastq> <region>* = creates index for single region of interest, region is in the format chromosome:start-end 
+*samtools faidx <file.fastq> \ <region1> <region2> = create index for multiple regions
+
+
+
