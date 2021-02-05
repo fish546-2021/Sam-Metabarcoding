@@ -1,11 +1,21 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-.rar
-.fastq
-.tdx
-.rdx
-.ndx
-.fasta
-.txt
+#Files to ignore
+#General
+*.fastq
+*.fastq.gz
+*.rar
+*.rdx
+*.RData
+*.DS_Store
+*.fasta
+
+
+#Specific Files
+Sam-Metabarcoding/Data/Bat_Data/*.fastq
+Sam-Metabarcoding/Data/Bat_Data/*.fastq.gz
+Sam-Metabarcoding/Data/Bat_Data/*.zip
+Sam-Metabarcoding/Data/Bat_Data/*.rar
+Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.fasta
+Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.fasta
+Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.ndx
+Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.tdx
+Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.rdx
