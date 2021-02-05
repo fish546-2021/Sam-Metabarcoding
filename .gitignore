@@ -7,15 +7,15 @@
 *.RData
 *.DS_Store
 *.fasta
-
-
+*.Rhistory
+*.Rproj.user
 #Specific Files
-Sam-Metabarcoding/Data/Bat_Data/*.fastq
-Sam-Metabarcoding/Data/Bat_Data/*.fastq.gz
-Sam-Metabarcoding/Data/Bat_Data/*.zip
-Sam-Metabarcoding/Data/Bat_Data/*.rar
-Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.fasta
-Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.fasta
-Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.ndx
-Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.tdx
-Sam-Metabarcoding/Data/wolf_metabarcoding_dataset/*.rdx
+Data/Bat_Data/*.fastq
+Data/Bat_Data/*.fastq.gz
+Data/Bat_Data/*.zip
+Data/Bat_Data/*.rar
+Data/wolf_metabarcoding_dataset/*.fasta
+Data/wolf_metabarcoding_dataset/*.fasta
+Data/wolf_metabarcoding_dataset/*.ndx
+Data/wolf_metabarcoding_dataset/*.rdx
+*.DS_Store
