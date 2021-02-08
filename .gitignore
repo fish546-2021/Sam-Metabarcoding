@@ -18,4 +18,17 @@ Data/wolf_metabarcoding_dataset/*.fasta
 Data/wolf_metabarcoding_dataset/*.fasta
 Data/wolf_metabarcoding_dataset/*.ndx
 Data/wolf_metabarcoding_dataset/*.rdx
+
+#More files
+Data/MiSeq_SOP/*.fastq
+Data/MiSeq_SOP/*.fasta
+Data/MiSeq_SOP/*.fa
+Data/MiSeq_SOP/filtered/*fastq.gz
+Data/MiSeq_SOP/*.batch
+Data/MiSeq_SOP/*.files
+Data/MiSeq_SOP/*.metadata
+Data/MiSeq_SOP/*.design
+
 *.DS_Store
+.Rproj.user
+

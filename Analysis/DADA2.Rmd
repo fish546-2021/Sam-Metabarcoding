@@ -1,0 +1,257 @@
+---
+title: "Dada2"
+author: "Samantha Kreling"
+date: "2/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("dada2","phyloseq","DECIPHER","phangorn"))
+
+library(dada2)
+library(ggplot2)
+library(phyloseq)
+library(phangorn)
+library(DECIPHER)
+library(here)
+packageVersion('dada2')
+```
+
+
+```{r}
+path <- "Data/Bat_Data/"
+list.files(path)
+```
+
+#Just going to work with sample #1
+```{r}
+raw_forward <- sort(list.files(path, pattern="_R1_001.fastq"))
+raw_reverse <- sort(list.files(path, pattern="_R2_001.fastq"))
+
+sample_names <- sapply(strsplit(basename(raw_forward),"_"),
+                       `[`, 1)
+```
+
+## Plot Quality
+```{r}
+plotQualityProfile(here::here("Data","Bat_Data",raw_forward)) 
+plotQualityProfile(here::here("Data","Bat_Data",raw_reverse)) 
+
+```
+
+```{r}
+filtered_path <- file.path(path, "filtered")
+filtered_forward <- file.path(filtered_path, paste0(sample_names,"_R1_trimmed.fastq.gz"))
+
+filtered_reverse <- file.path(filtered_path, paste0(sample_names,"_R2_trimmed.fastq.gz"))
+
+```
+
+
+```{r}
+
+out <- filterAndTrim(here::here("Data","Bat_Data",raw_forward), filtered_forward, here::here("Data","Bat_Data",raw_reverse), filtered_reverse, maxN=0, maxEE=c(2,2), truncQ = 2, rm.phix = T, compress = T, multithread = T )
+
+#used standard filtering paramteres but did not define a length to truncate
+head(out) #tells you how many have been removed!
+```
+
+## Looking at Error rates
+The learnError algorithm learns the error model from the data and will help DADA2 to fit its method to the data
+```{r}
+errors_forward <- learnErrors(filtered_forward, multithread = T)
+
+errors_reverse <- learnErrors(filtered_reverse, multithread = T)
+
+plotErrors(errors_forward, nominalQ = T)+ggplot2::theme_minimal()
+plotErrors(errors_reverse,nominalQ = T)+ggplot2::theme_minimal()
+```
+
+## Dereplication
+
+This step is meant to combine all identical sequencing reads into a "unique sequence" with a corresponding "abundance" value. This reduces computation time
+```{r}
+derep_forward <- derepFastq(filtered_forward, verbose=T)
+derep_reverse <- derepFastq(filtered_reverse, verbose = T)
+
+names(derep_forward) <- sample_names
+names(derep_reverse) <- sample_names
+```
+
+## Sample Inference
+
+We are now ready to apply the core sequence-variant inference algorithm to the dereplicated data
+```{r}
+dada_forward <- dada(derep_forward, err=errors_forward, multithread = T) #20,373 and 18,888 unique sequences
+dada_reverse <- dada(derep_reverse, err=errors_reverse, multithread = T) #18975 and 19496 unique sequences
+```
+
+## Merge paired-end reads
+
+```{r}
+merged_reads <- mergePairs(dada_forward, derep_forward, dada_reverse, derep_reverse, verbose = T) #get 54000 or so paried end reads from both
+head(merged_reads[[1]])
+```
+
+## Construct Sequence Table
+
+We can now construct a seqeucne table of our samples
+```{r}
+seq_table <- makeSequenceTable(merged_reads)
+dim(seq_table)
+
+table(nchar(getSequences(seq_table)))
+```
+
+## Remove chimeras
+
+The dada method used earlier removes substitutions and indel errors but chimeras remain.
+
+```{r}
+seq_table_nochim <- removeBimeraDenovo(seq_table, method='consensus', multithread=T, verbose = T)
+
+sum(seq_table_nochim)/sum(seq_table)
+```
+As a final check of our progres, we'll look at the number of reads that made it thorugh each step in the pipeline
+```{r}
+get_n <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dada_forward, get_n), sapply(merged_reads, get_n), rowSums(seq_table), rowSums(seq_table_nochim))
+colnames(track) <- c('input','filtered','denoised','merged','tabled','nonchim')
+rownames(track) <- sample_names
+head(track) #dropped out some 20000 reads from start to end
+```
+
+## Assign taxonomy
+
+DADA2 is reference-free so we have to build the tree ourselves.
+
+First we allign our sequences
+```{r}
+sequences <- getSequences(seq_table)
+names(sequences) <- sequences #this propogates to teh tip lables of the tree
+alignment <- AlignSeqs(DNAStringSet(sequences), anchor=NA)
+```
+
+Then we build a neighbour-joining tree then fit a max liklihood using the neighbour-joining tree as a starting point
+```{r}
+phang_align <- phyDat(as(alignment, 'matrix'), type='DNA')
+dm <- dist.ml(phang_align)
+treeNJ <- NJ(dm)
+fit = pml(treeNJ, data=phang_align)
+
+## negative edges length changed to 0
+
+fitGTR <- update(fit, k=4, inv=0.2)
+fitGTR <- optim.pml(fitGTR, model = 'GTR', optInv = T, optGamma = T, rearrangement = 'stochastic', control=pml.control(trace=0))
+deta
+```
+
+## Dataset in the tutorial
+
+Giving this a try with the dataset in the tutorial. I think the above final fitGTR was overloading my computer becasue theres so many unique sequences
+
+```{r}
+path <- here::here("Data","MiSeq_SOP")
+list.files(path)
+
+raw_forward_mouse <- sort(list.files(path, pattern="_R1_001.fastq", full.names = T))
+raw_reverse_mouse <- sort(list.files(path, pattern = "_R2_001.fastq",full.names = T))
+
+sample_names_mouse <- sapply(strsplit(basename(raw_forward_mouse), "_"), `[`, 1)
+
+plotQualityProfile(raw_forward_mouse[1:2])
+plotQualityProfile(raw_reverse_mouse[1:2])
+
+filtered_path_mouse <- file.path(path, "filtered")
+filtered_forward_mouse <- file.path(filtered_path_mouse, paste0(sample_names_mouse, "_R1_trimmed.fastq.gz"))
+filtered_reverse_mouse <- file.path(filtered_path_mouse, paste0(sample_names_mouse, "_R2_trimmed.fastq.gz"))
+
+out <- filterAndTrim(raw_forward_mouse, filtered_forward_mouse, raw_reverse_mouse,
+                     filtered_reverse_mouse, truncLen=c(240,160), maxN=0,
+                     maxEE=c(2,2), truncQ=2, rm.phix=TRUE, compress=TRUE,
+                     multithread=TRUE)
+head(out)
+
+errors_forward_mouse <- learnErrors(filtered_forward_mouse, multithread = T)
+errors_reverse_mouse <- learnErrors(filtered_reverse_mouse, multithread = T)
+
+plotErrors(errors_forward_mouse, nominalQ = T)+ggplot2::theme_minimal()
+plotErrors(errors_reverse_mouse, nominalQ = T)+ggplot2::theme_minimal()
+
+derep_forward_mouse <- derepFastq(filtered_forward_mouse, verbose = T)
+derep_reverse_mouse <- derepFastq(filtered_reverse_mouse, verbose=T)
+
+names(derep_forward_mouse) <- sample_names_mouse
+names(derep_reverse_mouse) <- sample_names_mouse
+
+dada_forward_mouse <- dada(derep_forward_mouse, err=errors_forward_mouse, multithread = T)
+dada_reverse_mouse <- dada(derep_reverse_mouse, err=errors_reverse_mouse, multithread = T)
+dada_forward_mouse[[1]]
+
+merged_reads_mouse <- mergePairs(dada_forward_mouse, derep_forward_mouse, dada_reverse_mouse, derep_reverse_mouse, verbose=T)
+head(merged_reads_mouse[[1]])
+
+seq_table_mouse <- makeSequenceTable(merged_reads_mouse)
+dim(seq_table_mouse)
+table(nchar(getSequences(seq_table_mouse)))
+
+seq_table_nochim_mouse <- removeBimeraDenovo(seq_table_mouse, method='consensus', multithread=T, verbose = T)
+dim(seq_table_nochim_mouse)
+sum(seq_table_nochim_mouse)/sum(seq_table_mouse) #0.96 reads kept
+
+taxa <- assignTaxonomy(seq_table_nochim_mouse, here::here("Data","MiSeq_SOP","silva_nr_v128_train_set.fa"), multithread = T)
+taxa <- addSpecies(taxa, here::here("Data","MiSeq_SOP","silva_species_assignment_v128.fa"))
+
+taxa_print <- taxa
+rownames(taxa_print) <- NULL
+head(taxa_print)
+
+sequences <- getSequences(seq_table_mouse)
+names(sequences) <- sequences
+alignment <- AlignSeqs(DNAStringSet(sequences), anchor=NA)
+
+phang_align <- phyDat(as(alignment, 'matrix'), type='DNA')
+dm <- dist.ml(phang_align)
+treeNJ <- NJ(dm)
+fit = pml(treeNJ, data=phang_align)
+fitGTR <- update(fit, k=4, inv=0.2)
+fitGTR <- optim.pml(fitGTR, model='GTR', optInv=T, optGamma = T, rearrangement = 'stochastic', contro=pml.control(trace=0))
+detach('package:phangorn', unload=T)
+
+sample_data <- read.table('https://hadrieng.github.io/tutorials/data/16S_metadata.txt',
+    header=TRUE, row.names="sample_name")
+physeq <- phyloseq(otu_table(seq_table_nochim_mouse, taxa_are_rows = F), sample_data(sample_data), tax_table(taxa), phy_tree(fitGTR$tree))
+
+physeq <- prune_samples(sample_names(physeq) != 'Mock', physeq)
+physeq
+
+plot_richness(physeq, x='day', measures=c('Shannon','Fisher'), color='when')+ggplot2::theme_minimal()
+#no obvious differences so lets look at ordination
+
+ord <- ordinate(physeq, 'MDS', 'euclidean')
+plot_ordination(physeq, ord, type='samples', color='when',
+                title='PCA of the samples from the MiSeq SOP') +
+    theme_minimal()
+
+ord <- ordinate(physeq, 'NMDS', 'bray')
+plot_ordination(physeq, ord, type='samples', color='when', title='PCA of the samples frmo the MiSeq SOP')+theme_minimal()
+
+top20 <- names(sort(taxa_sums(physeq), decreasing=TRUE))[1:20]
+physeq_top20 <- transform_sample_counts(physeq, function(OTU) OTU/sum(OTU))
+physeq_top20 <- prune_taxa(top20, physeq_top20)
+plot_bar(physeq_top20, x='day', fill='Family') +
+    facet_wrap(~when, scales='free_x') +
+    theme_minimal()
+
+bacteroidetes <- subset_taxa(physeq, Phylum %in% c('Bacteroidetes'))
+plot_tree(bacteroidetes, ladderize='left', size='abundance',
+          color='when', label.tips='Family')
+```
+
