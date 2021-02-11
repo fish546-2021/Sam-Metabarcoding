@@ -1,0 +1,128 @@
+---
+title: "Dada2 Bat Data"
+author: "Samantha Kreling"
+date: "2/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+library(dada2)
+library(ggplot2)
+library(phyloseq)
+library(phangorn)
+library(DECIPHER)
+library(stringr)
+library(here)
+library(insect)
+```
+
+
+```{r}
+path <- "Data/Bat_Data/"
+list.files(path)
+```
+
+#Just going to work with sample #1
+```{r}
+raw_forward <- here::here("Data","Bat_Data","1_S1_L001_R1_001.fastq")
+raw_reverse <- here::here("Data","Bat_Data","1_S1_L001_R2_001.fastq")
+
+sample_names <- sapply(strsplit(basename(raw_forward),"_"),
+                       `[`, 1)
+
+# Primers
+primer_set_fwd =c("AGATATTGGAACATTATATTTTATTTTTGG","AGATATTGGAACTTTATATTTTATTTTTGG")
+primer_set_rv = c("AACTAATCAATTACCAAATCCTCC", "AACTAATCAATTTCCAAATCCTCC", "TACTAATCAATTTCCAAATCCTCC", "TACTAATCAATTACCAAATCCTCC")
+primer_length_fwd <- str_length(primer_set_fwd[1])
+primer_length_rev <- str_length(primer_set_rv[1])
+
+```
+
+## Plot Quality
+```{r}
+plotQualityProfile(here::here(raw_forward)) 
+plotQualityProfile(here::here(raw_reverse)) 
+
+```
+
+```{r}
+filtered_path <- file.path(path, "filtered")
+filtered_forward <- file.path(filtered_path, paste0(sample_names,"_R1_trimmed.fastq.gz"))
+
+filtered_reverse <- file.path(filtered_path, paste0(sample_names,"_R2_trimmed.fastq.gz"))
+
+```
+
+
+```{r}
+#Truncation problem??
+out <- filterAndTrim(raw_forward, filtered_forward, raw_reverse, filtered_reverse,
+    trimLeft = c(primer_length_fwd, primer_length_rev), maxN = 0, maxEE = c(2, 
+        2), truncQ = 2, rm.phix = TRUE, compress = FALSE, multithread = F)
+
+#used standard filtering paramteres but did not define a length to truncate
+head(out) #tells you how many have been removed!
+
+
+```
+
+
+```{r}
+
+errors_forward <- learnErrors(filtered_forward, multithread = T)
+
+errors_reverse <- learnErrors(filtered_reverse, multithread = T)
+
+plotErrors(errors_forward, nominalQ = T)+ggplot2::theme_minimal()
+plotErrors(errors_reverse,nominalQ = T)+ggplot2::theme_minimal()
+```
+# Deprelicate the Reads
+
+```{r}
+derep_forward <- derepFastq(filtered_forward, verbose=T)
+derep_reverse <- derepFastq(filtered_reverse, verbose = T)
+
+names(derep_forward) <- sample_names
+names(derep_reverse) <- sample_names
+```
+
+## Sequence-variant inference algroithm to the drepolicated data
+```{r}
+dada_forward <- dada(derep_forward, err=errors_forward, multithread = T) #20,373 and 18,888 unique sequences
+dada_reverse <- dada(derep_reverse, err=errors_reverse, multithread = T) #18975 and 19496 unique sequences
+```
+
+## Merge Paired-end Reads
+
+```{r}
+merged_reads <- mergePairs(dada_forward, derep_forward, dada_reverse, derep_reverse, verbose = T) #get 54000 or so paried end reads from both
+head(merged_reads[[1]])
+```
+
+## Make sequence table
+```{r}
+seqtab <- makeSequenceTable(merged_reads)
+dim(seqtab)
+
+#Transposed sequnce table
+t_seqtab <- t(seqtab)
+table(nchar(getSequences(seqtab)))
+```
+## Remove Chimeras
+```{r}
+seq_table_nochim <- removeBimeraDenovo(seqtab, method='consensus', multithread=T, verbose = T)
+
+sum(seq_table_nochim)/sum(seqtab)
+```
+## Track number of reads at each step
+```{r}
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dada_forward, getN),sapply(dada_reverse, getN), sapply(mergers, getN), rowSums(seq_table_nochim)) #not working because it wouldnt let me rename derep classes
+
+```

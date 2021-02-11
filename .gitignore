@@ -14,6 +14,7 @@ Data/Bat_Data/*.fastq
 Data/Bat_Data/*.fastq.gz
 Data/Bat_Data/*.zip
 Data/Bat_Data/*.rar
+Data/Bat_Data/*.fas
 Data/wolf_metabarcoding_dataset/*.fasta
 Data/wolf_metabarcoding_dataset/*.fasta
 Data/wolf_metabarcoding_dataset/*.ndx
@@ -28,7 +29,16 @@ Data/MiSeq_SOP/*.batch
 Data/MiSeq_SOP/*.files
 Data/MiSeq_SOP/*.metadata
 Data/MiSeq_SOP/*.design
+Analysis/*.fa
 
 *.DS_Store
 .Rproj.user
+
+#Obittools Project Files
+Data/wolf_tutorial/taxdump/*.dmp
+Data/wolf_tutorial/taxdump/*.txt
+Data/wolf_tutorial/taxdump/*.prt
+Data/wolf_tutorial/*.ndx
+Data/wolf_tutorial/*.tdx
+Data/wolf_tutorial/*.fa
 
