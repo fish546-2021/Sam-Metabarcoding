@@ -30,6 +30,7 @@ Data/MiSeq_SOP/*.files
 Data/MiSeq_SOP/*.metadata
 Data/MiSeq_SOP/*.design
 Analysis/*.fa
+Data/wolf_tutorial/*.fa
 
 *.DS_Store
 .Rproj.user
@@ -40,5 +41,5 @@ Data/wolf_tutorial/taxdump/*.txt
 Data/wolf_tutorial/taxdump/*.prt
 Data/wolf_tutorial/*.ndx
 Data/wolf_tutorial/*.tdx
-Data/wolf_tutorial/*.fa
+Results/Mouse/*.fa
 
