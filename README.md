@@ -15,6 +15,19 @@ In this Repository you will find the following:
 
 *NOTE*: The obitools workflow is currently not on a Jupyter notebook because I couldn't get the virtual environment that is necessary to work in obitools to work from there and all the workflow process is in a different directory. Will move it over at some point.
 
+## General Workflows by Dataset
+
+#### Bat - 
+
+1. Get data from https://dryad.figshare.com/articles/dataset/Sequence_Raw_Data_-_Part_1/10649372
+2. Do some data exploration and some quality control - trim in DADA 2 using truncation to 10 quality score (standard; i.e. remove regions where quality falls below 10) or trim in commandline
+3. 
+
+#### Wolf -
+
+Covert fast to tab deliminated using: https://github.com/RobertsLab/code/blob/master/fasta.md#fasta-to-tab-delimited
+#### Mouse - 
+
 ## Next steps
 
 1. I figured out why DADA2 wasn't working with the BOLD reference database and it's because you need a very specpifc format, so I'm in the process of either A) converting that BOLD reference database or B) finding an alternate database thats already formatted (currenlty have only found 16s databases though)
