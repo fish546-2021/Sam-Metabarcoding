@@ -35,11 +35,14 @@ Data/wolf_tutorial/*.fa
 *.DS_Store
 .Rproj.user
 
-#Obittools Project Files
+#ObiTools Wolf Project Files
 Data/wolf_tutorial/taxdump/*.dmp
 Data/wolf_tutorial/taxdump/*.txt
 Data/wolf_tutorial/taxdump/*.prt
 Data/wolf_tutorial/*.ndx
 Data/wolf_tutorial/*.tdx
 Results/Mouse/*.fa
+
+#ObiTools Bat Project Files
+Data/Bat_Data/*bat.obidms
 
