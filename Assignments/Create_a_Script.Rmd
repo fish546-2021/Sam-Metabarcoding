@@ -1,0 +1,60 @@
+---
+title: "Assignment - Write a Script"
+author: "Samantha Kreling"
+date: "2/17/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+The purpose of this script is to take raw input fastq of fastq.gz files and plot a combined figure of quality metric plots and write that figure to a specified directory. Inputs to the script are stated below
+
+## Load in required libraries
+```{r}
+library(here)
+library(tools)
+library(dada2)
+```
+## Set paths to data and extract sample names from file names
+```{r}
+path <- here::here("Data/Bat_Data")
+list.files(path)
+
+Forwards <- sort(list.files(path, pattern="_R1_001.fastq", full.names = T))
+Reverses <- sort(list.files(path,pattern = "_R2_001.fastq", full.names = T))
+
+All.files <- c(Forwards, Reverses)
+sample.names <- sapply(strsplit(basename(Forwards),"_"), `[`, 1)
+
+out.path <- "Results" #Where we will save the figures to
+```
+## Create function for the visualization of quality plots for the different fastq files all at once and save the graph as .png
+
+This function takes 4 inputs:
+
+1. Files = A relative path to the files you want to work with. For plotQualityProfile to work files need to be fastq or fastq.gz
+2. here.file.path = A here package style file path list. I.E. from starting here::here(), you will want to have subsequent directories in "___", "___" style.
+3. plot.width = The final width of your ouput plot
+4. plot.height = The final height of your output plot
+
+Note that this function will input 1 single graph for all the files inputted and is thus probably not the best for very large lists of files.
+```{r}
+figure.generations <- function(Files, here.file.path, plot.width, plot.height, columns) {
+  for (i in length(Files)){
+  png(here::here(here.file.path, "Quality_Plots.png"), width=plot.width, height=plot.height)
+  plots <- plotQualityProfile(Files[1:i])
+  print(plots)
+  dev.off()
+  }
+}
+
+```
+
+## Test function
+```{r}
+figure.generations(All.files, out.path, 800, 400)
+```
+
+
