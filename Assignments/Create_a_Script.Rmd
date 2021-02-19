@@ -48,7 +48,6 @@ This function takes 4 inputs:
 Note that this function will input 1 single graph for all the files inputted and is thus probably not the best for very large lists of files.
 
 
-Many explitives could be put here because I'm annoyed, but at some point my function broke and I can't really figure out why I keep getting 'Scale for 'y' is already present. Adding another scale for 'y', which will replace the existing scale' as an error when this was working *perfectly* yesterday
 ```{r}
 plots <- list()
 figure.generations <- function(Files, here.file.path) {
