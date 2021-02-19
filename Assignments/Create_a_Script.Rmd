@@ -3,6 +3,8 @@ title: "Assignment - Write a Script"
 author: "Samantha Kreling"
 date: "2/17/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -17,8 +19,14 @@ library(here)
 library(tools)
 library(dada2)
 ```
+
+```{bash}
+gunzip -k *fastq.gz
+```
+
 ## Set paths to data and extract sample names from file names
 ```{r}
+
 path <- here::here("Data/Bat_Data")
 list.files(path)
 
@@ -26,7 +34,10 @@ Forwards <- sort(list.files(path, pattern="_R1_001.fastq", full.names = T))
 Reverses <- sort(list.files(path,pattern = "_R2_001.fastq", full.names = T))
 
 All.files <- c(Forwards, Reverses)
+All.files <- All.files[c(1,3,5,7)] # I originally did this with the fastq files only, but needed the .gz to push to github and I couldn't find a way to not include them in the file list above for some reason that worked so this is a horrible solution but my fucntion is broken now anyway and I seriously don't have time to fix it and have already spent like 6 hours on this class today and many others through the week :/
+
 sample.names <- sapply(strsplit(basename(Forwards),"_"), `[`, 1)
+
 
 out.path <- "Results" #Where we will save the figures to
 ```
@@ -40,10 +51,14 @@ This function takes 4 inputs:
 4. plot.height = The final height of your output plot
 
 Note that this function will input 1 single graph for all the files inputted and is thus probably not the best for very large lists of files.
+
+
+Many explitives could be put here because I'm annoyed, but at some point my function broke and I can't really figure out why I keep getting 'Scale for 'y' is already present. Adding another scale for 'y', which will replace the existing scale' as an error when this was working *perfectly* yesterday
 ```{r}
-figure.generations <- function(Files, here.file.path, plot.width, plot.height, columns) {
+plots <- list()
+figure.generations <- function(Files, here.file.path) {
   for (i in length(Files)){
-  png(here::here(here.file.path, "Quality_Plots.png"), width=plot.width, height=plot.height)
+  png(here::here(here.file.path, "Quality_Plots.png"))
   plots <- plotQualityProfile(Files[1:i])
   print(plots)
   dev.off()
@@ -54,7 +69,8 @@ figure.generations <- function(Files, here.file.path, plot.width, plot.height, c
 
 ## Test function
 ```{r}
-figure.generations(All.files, out.path, 800, 400)
+figure.generations(All.files, out.path)
+plotQualityProfile(All.files)
 ```
 
 
