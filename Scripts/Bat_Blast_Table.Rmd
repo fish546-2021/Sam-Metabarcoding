@@ -12,6 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(here)
 library(stringr)
+library(ggplot2)
+library(dplyr)
+library(viridisLite)
 
 sample2 <- read.delim(here::here("Results","Bat","2_S2_L001_R2_001_trimmed_referenceu_blastn.tab"), header = F)
 dim(sample2)
@@ -38,7 +41,17 @@ colnames(sample2_with_species) <- c("query", "sseqid","pident", "length","mismat
 sample2_with_species$sseqid <- as.character(sample2_with_species[,2])
 sample2_with_species$species <- sapply(strsplit(sample2_with_species[,2],"\\|"),`[`, 2)# a little messy but it'll do the job!
 
-## There are some entries that have a number tag situated along with it (the ones with a fourth column I think) and that is causing some duplication, so I'll need to remove that 
+## Some of these matched some kind of funky blast database entries so they have wierd names and we'll need to clean that up a bit
+```
+Let's create a table by genus as well
+```{r}
+sample2_with_species$genus <- sapply(strsplit(sample2_with_species$species, "_"), `[`, 1)
+
+head(sample2_with_species$genus) #hurray this got what we wanted!
+
+genus.table <- as.data.frame(table(sample2_with_species$genus))
+
+#write.csv(genus.table, here::here("Results","Bat","Genus_table_2.csv"))
 ```
 
 # Table
@@ -47,7 +60,39 @@ Now let's form a table that will give us counts of the different species represe
 
 species.table <- table(sample2_with_species$species)
 species.table
-write.csv(species.table, "batS2R2_blast_output.csv")
+#write.csv(species.table, "batS2R2_blast_output.csv")
 ```
+# Let's make some plots with the genus table
+```{r}
+
+ggplot(data=genus.table, aes(x="",y=Freq, fill=Var1))+geom_bar(stat="identity", width=1)+theme(legend.position = "bottom")
+
+#Create column with percent of reads
+genus.table$percentagediet <- genus.table$Freq/sum(genus.table$Freq)*100
+
+#Create Bar graph of reads greater than 1%
+ggplot(data=genus.table[genus.table$percentagediet>=1,], aes(x=Var1, y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(legend.position= "none",axis.text.x = element_text(angle=90, vjust = 0.35), panel.background = element_rect(fill="white"))+xlab("Genus") + ylab("Percent of Reads")
+
+#Create Pie chart of reads greater than 1%
+ggplot(data=genus.table[genus.table$percentagediet>=1,], aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+
+
+#Create a dataframe iwth the >=1% and a category 'other' that is the sum of the rest
+greater <- genus.table[genus.table$percentagediet>=1,]
+other <- (genus.table[genus.table$percentagediet<1,])
+sum.reads <- sum(other$Freq)
+sum.perc <- sum(other$percentagediet)
+
+greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=sum.perc))
+
+#Create Pie chart of reads greater than 1% m+ other
+ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+
+
+
+
+
+```
+
 
 

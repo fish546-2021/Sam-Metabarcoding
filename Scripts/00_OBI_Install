@@ -1,0 +1,10 @@
+#Script to install OBITools and use in Jupyter Notebooks
+
+git clone https://git.metabarcoding.org/obitools/obitools3.git
+cd obitools3
+conda create --name obitoolsenv
+conda activate obitoolsenv
+pip3 install --upgrade pip setuptools wheel Cython
+pip3 install --pre --upgrade OBITools3
+conda install -c conda-forge jupyterlab
+jupyter lab
