@@ -16,13 +16,7 @@ library(ggplot2)
 library(dplyr)
 library(viridisLite)
 
-sample2 <- read.delim(here::here("Results","Bat","2_S2_L001_R2_001_trimmed_referenceu_blastn.tab"), header = F)
-dim(sample2)
-```
-
-# Examine Data
-```{r}
-tail(sample2,20)
+sample2 <- read.delim(here::here("Results","Bat","bat_S2_blast_cleaned_mox.tab"), header = F)
 ```
 
 # Split the String with the species name
@@ -31,9 +25,9 @@ We'll first test with copying that column into a new dataframe and then perform 
 
 Note that in R '|' is a special symbol and to avoid that you will need to write "\\|"
 ```{r}
-sample.species.raw <- as.character(sample2[,2])
-str_split(sample.species.raw, "\\|") # this works so the next part should also
-sample.species.2 <- sapply(strsplit(sample.species.raw,"\\|"),`[`, 2)#Yay we've successfully extracted the species names!
+#sample.species.raw <- as.character(sample2[,2])
+#str_split(sample.species.raw, "\\|") # this works so the next part should also
+#sample.species.2 <- sapply(strsplit(sample.species.raw,"\\|"),`[`, 2)#Yay we've successfully extracted the species names!
 
 #Now let's execute that across the whole dataframe
 sample2_with_species <- sample2
@@ -50,7 +44,6 @@ sample2_with_species$genus <- sapply(strsplit(sample2_with_species$species, "_")
 head(sample2_with_species$genus) #hurray this got what we wanted!
 
 genus.table <- as.data.frame(table(sample2_with_species$genus))
-
 #write.csv(genus.table, here::here("Results","Bat","Genus_table_2.csv"))
 ```
 
@@ -59,8 +52,7 @@ Now let's form a table that will give us counts of the different species represe
 ```{r}
 
 species.table <- table(sample2_with_species$species)
-species.table
-#write.csv(species.table, "batS2R2_blast_output.csv")
+#write.csv(species.table, here::here("Results","Bat","batR2_species_blast_output.csv"))
 ```
 # Let's make some plots with the genus table
 ```{r}
@@ -87,9 +79,6 @@ greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=
 
 #Create Pie chart of reads greater than 1% m+ other
 ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
-
-
-
 
 
 ```
