@@ -1,0 +1,2 @@
+#exp  sample  forward_primer  reverse_primer	extra_info
+bat 2 AGATATTGGAACWTTATATTTTATTTTTGG  WACTAATCAATTWCCAAATCCTCC	F
