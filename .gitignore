@@ -38,8 +38,10 @@ Data/wolf_tutorial/taxdump/*.prt
 Data/wolf_tutorial/*.ndx
 Data/wolf_tutorial/*.tdx
 Results/Mouse/*.fa
+Data/wolf_tutorial/*wolf.obidms
 
 #ObiTools Bat Project Files
-
-
-
+*.oda
+*.odd
+*.odc
+*.odv
