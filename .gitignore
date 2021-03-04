@@ -1,7 +1,4 @@
 #Files to ignore
-#General
-*.fastq
-*.fastq.gz
 *.rar
 *.rdx
 *.RData
@@ -10,8 +7,7 @@
 *.Rhistory
 *.Rproj.user
 #Specific Files
-Data/Bat_Data/*.fastq
-Data/Bat_Data/*.fastq.gz
+
 Data/Bat_Data/*.zip
 Data/Bat_Data/*.rar
 Data/Bat_Data/*.fas
@@ -44,5 +40,6 @@ Data/wolf_tutorial/*.tdx
 Results/Mouse/*.fa
 
 #ObiTools Bat Project Files
-Data/Bat_Data/*bat.obidms
+
+
 
