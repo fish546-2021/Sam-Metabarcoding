@@ -1,5 +1,10 @@
 # Sam-Metabarcoding
 
+## Final Written Report + Presentation
+[Write Up](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Assignments/FinalWriteUp.Rmd)
+[Presentation](https://docs.google.com/presentation/d/16qDp5F9E2PU1-eJhkUdx4n79HiVpTWdA-55Cm6JgZXU/edit?usp=sharing)
+
+
 ## Goals
 
 The goal of this repository is to become comfortable with the bioinformatic pipeline for metabarcoding, working with a variety of datasets and software tools
