@@ -116,6 +116,11 @@ obi clean -s MERGED_sample -r 0.05 -H bat/denoised_sequences bat/cleaned_sequenc
 #Export cleaned sequences for use in BLAST
 #note may need to add the '-s MERGED_sample' argument for more than 1 sample
 obi clean -r 0.05 -H bat/denoised_sequences - > cleaned_sequences.fasta
+
+#Note here the output header has all the info (count included!) in it, but sepearted by spaces and semicolons, use sed to remove these and replace with '_'
+
+sed -e 's/ /_/g' inputfile > outputfile
+sed -e 's/;/_/g' inputfile > outputfile
 ```
 
 ## BLAST
@@ -150,6 +155,7 @@ ${bldir}blastn \
 -query ../Data/Bat_Data/dereplicated.fasta \
 -out ../Results/Bat/dereplicated_referenceu_blastn.tab \
 -outfmt 6 #6 will give tabulated output
+# Use outfmt '6 qseqid' to give full header in output -this is what we ended up wanting to do
 
 ```
 
@@ -209,3 +215,5 @@ greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=
 ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
 ```
 
+## Results
+By far one of the largest struggles I've had in this class are trying to format the reference database correctly. If I had been able to format it correctly, I could have finished the entire OBITools workflow which I think would reduce the kinds of errors that I am seeing. The file I blasted was exported as a cleaned OBITools file which should have a count value 
