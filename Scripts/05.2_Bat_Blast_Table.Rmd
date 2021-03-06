@@ -1,0 +1,121 @@
+---
+title: "Cleaned_Bat_Blast"
+author: "Samantha Kreling"
+date: "3/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load in the data and required libraries
+```{r}
+library(here)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(treemap)
+library(viridisLite)
+
+sample2 <- read.delim(here::here("Results","Bat","cleaned_fullheader2.tab"), header = F)
+```
+
+# Examine Data
+```{r}
+sample2$V1[1] #oriiginal sample info including count
+sample2$V2[1] #species name
+```
+
+# Extract information
+```{r}
+#extract species names
+sample2$speices <- as.character(sample2[,2])
+sample2$species <- sapply(strsplit(sample2$speices,"\\|"),`[`, 2)# a little messy but it'll do the job!
+
+#extract genus names
+sample2$genus <- sapply(strsplit(sample2$species, "_"), `[`, 1)
+
+#extract count information
+sample2$count <- sapply(strsplit(as.character(sample2[,1]),"_"),`[`, 14)
+sample2$count <- as.numeric(gsub("COUNT=", "", sample2$count))# extracted count values
+
+#create new cleaned data frame and write as CSV
+sample.cleaned <- sample2[,c(4:6)]
+genus
+#write.csv(sample.cleaned,here::here("Results","Bat","Final_bat_r2_dataframe.csv"))
+```
+
+# Summarise the items that are repeated
+```{r}
+table(sample.cleaned$species)
+dim(sample.cleaned)
+aggregate(sample.cleaned, by=list(sample.cleaned$species, sample.cleaned$count), FUN = table)
+
+#Something definitly off w these count values
+
+sampletable <- as.data.frame(table(sample.cleaned$species))
+genustable <- as.data.frame(table(sample.cleaned$genus))
+
+#Create a percentage column
+genustable$percentagediet <- genustable$Freq/sum(genustable$Freq)*100
+genustable$Var1 <- as.character(genustable$Var1)
+sampletable$percentage <- sampletable$Freq/sum(sampletable$Freq)*100
+
+genustable$Var1 <- ifelse(genustable$Freq>=0.5, genustable$Var1, "Other")
+table(genustable)
+
+#Create a dataframe iwth the >=1% and a category 'other' that is the sum of the rest
+greater <- genustable[genustable$percentagediet>=1,]
+other <- (genustable[genustable$percentagediet<1,])
+sum.reads <- sum(other$Freq)
+sum.perc <- sum(other$percentagediet)
+
+greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=sum.perc))
+
+#Create Pie chart of reads greater than 1% m+ other
+ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+
+
+
+#Create a dataframe iwth the >=1% and a category 'other' that is the sum of the rest
+greater <- genustable[genustable$percentagediet>=0.5,]
+other <- (genustable[genustable$percentagediet<0.5,])
+sum.reads <- sum(other$Freq)
+sum.perc <- sum(other$percentagediet)
+
+greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=sum.perc))
+
+#Create Pie chart of reads greater than 1% m+ other
+ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+
+addSmallLegend <- function(myPlot, pointSize = 0.5, textSize = 6, spaceLegend = 0.1) {
+    myPlot +
+        guides(shape = guide_legend(override.aes = list(size = pointSize)),
+               color = guide_legend(override.aes = list(size = pointSize))) +
+        theme(legend.title = element_text(size = textSize), 
+              legend.text  = element_text(size = textSize),
+              legend.key.size = unit(spaceLegend, "lines"))
+}
+
+
+
+
+p <- ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity", color="white", lwd=.1)+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+
+# Apply on original plot
+addSmallLegend(p)
+```
+# Tree Maps
+```{r}
+
+# treemap
+treemap(genustable[genustable$percentagediet>=0.5,],index=c("Var1"),vSize="percentagediet",type="index", title = "Percent of Reads - Bat Diet") 
+
+treemap(genustable[genustable$percentagediet>=1,],index=c("Var1"),vSize="percentagediet",type="index", title = "Percent of Reads - Bat Diet") 
+
+```
+# Bar Graph
+```{r}
+ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")```
+

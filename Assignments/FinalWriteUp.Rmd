@@ -165,7 +165,10 @@ Because the computation time is extensive, running blast via mox was a great opt
 
 ## R Analysis
 
-Congratulations, many headaches and moments of wanting to never touch genomics again, and you've got a final product that you can analyze in R. Why this is only a 3 unit class will forever be a mystery for me. I spent roughly 3 times as much on this class than any 5 unit class I've taken thus far. Here is an .rmd [file](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/05_Bat_Blast_Table.Rmd) of some of the R analysis.
+Congratulations, many headaches and moments of wanting to never touch genomics again, and you've got a final product that you can analyze in R. Why this is only a 3 unit class will forever be a mystery for me. I spent roughly 3 times as much on this class than any 5 unit class I've taken thus far. Here is an .rmd [file](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/05.2_Bat_Blast_Table.Rmd) of some of the R analysis.
+
+## Results
+By far one of the largest struggles I've had in this class are trying to format the reference database correctly. If I had been able to format it correctly, I could have finished the entire OBITools workflow which I think would reduce the kinds of errors that I am seeing. The file I blasted was exported as a cleaned OBITools file which should have a count value and I got a new file format that gives me this value, but it just seems wrong. Soemthing I'm pretty sure is off with the number of reads and how theyre represented so right now I just hav eeverything aggregated by species and genus and then ignroed the count column bc it didn't make any sense. I have some figures that display relative number of reads and the taxa that represnet > 0.2%, 0.5%, and 1% of the total number of reads. More than that and figures became unmanageable and illegdible. See the file linked above for figure code. 
 
 
 ```{r}
@@ -215,5 +218,3 @@ greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=
 ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
 ```
 
-## Results
-By far one of the largest struggles I've had in this class are trying to format the reference database correctly. If I had been able to format it correctly, I could have finished the entire OBITools workflow which I think would reduce the kinds of errors that I am seeing. The file I blasted was exported as a cleaned OBITools file which should have a count value 
