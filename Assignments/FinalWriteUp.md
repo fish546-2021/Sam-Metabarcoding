@@ -1,0 +1,210 @@
+
+Here I will only discuss the work that I did with the European free-tailed bat dataset.
+
+## Background Information 
+
+Background information: I processed a single sample S2_L001 from the dataset and merged both the forward and reverse reads. These reads were genereated using CO1 primers (Forward: AGATATTGGAACWTTATATTTTATTTTTGG, Reverse: WACTAATCAATTWCCAAATCCTCC) and sequenced using Illumina paired-ended sequencing. Samples come from European free-tailed bat (*Tadarida teniotis*) fecal samples from Five Bridges, Northeast Portugal. I followed a different approach than the paper which will be more applicable for my eventual coyote dataset than it was in applicability for this particalar dataset. The origianl paper removed haplotypes representing less than 1% of the total number of reads and reads containing stop codons. I did not do either of these steps and instead removed sequences by length and number of reads (>80bp removed, <10 reads removed which is more applicable to mammalian diet where there will be fewer taxa represented and more of each item potentailly consumed than for an insectivorous diet). I used the Barcode of Life Database (BOLD) to obtain a reference database of insect CO1 barcodes.
+
+## Data Exploration
+
+The first thing I did I do a bit of data exploration. This predonominatly consisted of looking at Fastqc readouts of the information. This is the general [script](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/01_ExploringData_Tutorial.ipynb) I used to explore the datafiles.
+
+Below I will show the commands used for the files (forward) S2_L001_R1_001.fastq and the (reverse) S2_L001_R2_001.fastq to explore the sequences within them. Remeber if running in Jupyter to add the '!' sign in front of each bash command.
+
+```{bash}
+#filepath={""} # uncomment enter your file path here if you want to reproduce this
+filepath={"../Data/Bat_Data/"}
+
+#This will give us a quick synopsis of the first couple of sequences so that we can understand the layout of the file and if everything looks ok from a quick snapshot
+head ${filepath}S2_L001_R1_001.fastq #note that in Jupyter you don't need the '$'
+head ${filepath}S2_L001_R2_001.fastq
+
+#Take a look at FastQC
+fastqcpath={"/Applications/FastQC/fastqc"}
+${fastqcpath} \ ${filepath}S2_L001_R1_001.fastq 
+${fastqcpath} \ ${filepath}S2_L001_R2_001.fastq 
+
+#You can then open up these outputs in the fastq html files and view the quality metrics. An alterantive to doing this via commandline is to open this with the desktop application of fastQC. You can also you multiQC as antoher way to visualize quality information. An example is shown below. First navigate to a folder with some .fastq or .fasta files and run the following
+
+multiqc .
+```
+
+## OBITools
+
+After doing some basic data exploration, I decided to use OBITools to work through my files. 
+
+### Installation 
+
+The first hurdle to working with OBITools is actually getting it installed. Note that when you Google OBITools, the first few links will generally point to OBITools 1. This runs on Python 2.7 which is no longer supported. The version you will want to run is OBITools3. Here is a simple [script](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/00_OBI_Install) to help you install OBITools3 and it is more or less repeated below. This script will also help you use OBITools in Jupyter.
+
+```{bash}
+git clone https://git.metabarcoding.org/obitools/obitools3.git
+cd obitools3
+conda create --name obitoolsenv
+conda activate obitoolsenv
+pip3 install --upgrade pip setuptools wheel Cython
+pip3 install --pre --upgrade OBITools3
+conda install -c conda-forge jupyterlab
+jupyter lab
+```
+
+### Create an NGS filter
+
+As part of the OBITools workflow, you will need to create an NGS filter. This filter will consist of a header and information about each sample and should look like [this](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Data/Bat_Data/bat_ngs_atom.txt) (note: you can add Illumina tags, and if you have dual tags you can write them like so; tag1:tag2). Make sure to create the file in a text editor such as ATOM and not something like Excel, as this may introduce errors. Also note that the 'F' in the 'extra_info' column MUST be present in order for the filter to work.
+
+
+### OBITools Processing
+
+Now that we have OBITools installed and our NGS filter, we can begin processing our files with it. Here is an overview of the steps we will take in OBITools. And [here](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/02_Bat_OBITools_Processing.ipynb) is an example script.
+
+1. Import reads to OBITools
+2. Recover full sequences from the forward and reverse reads, trim
+3. Remove unaligned sequence records
+4. Assign each seqeunce record to the corresponding sample 
+5. Dereplciate the sequences
+6. Denoise and clean the sequences
+
+```{bash}
+#first navigate to your working directory - replace with *your* working directory
+
+cd ../Desktop/School/FISH546_Git/Sam-Metabarcoding/Data/Bat_Data
+
+#Note that this can handle more than 1 file. You can point to a directory and import all fastq files in that directory into the reads1 directory
+obi import --fastq-input 2_S2_L001_R1_001.fastq bat/reads1
+obi import --fastq-input 2_S2_L001_R2_001.fastq bat/reads2
+obi import --ngsfilter bat_ngs_atom.txt bat/ngsfile
+
+#To do a quick check of the file strucutre that obitools creates use:
+obi ls bat
+
+#Recover the full sequences from the partial forward and reverse reads
+obi alignpairedend -R bat/reads2 bat/reads1 bat/aligned_reads
+
+#Export aligned reads - note that you can use this at any step to export the sequences
+obi alignpairedend -R bat/reads2 bat/reads1 - > aligned_reads.fastq
+
+#Remove unaligned sequence records
+obi grep -a mode:alignment bat/aligned_reads bat/good_sequences
+
+#Assign each sequence record to the corresponding sample/marker combo¶
+obi ngsfilter -t bat/ngsfile -u bat/unidentified_sequences --no-tags bat/good_sequences bat/identified_sequences
+
+#Dereplicate
+obi uniq bat/identified_sequences bat/dereplicated_sequences
+
+#Denoise
+#Remove 'useless metadata' and keep only the COUNT and merged_sample (count by sample) tags
+obi annotate -k COUNT -k MERGED_sample bat/dereplicated_sequences bat/cleaned_metadata_sequences
+
+#Keep only the sequences having a count greater or equal to 10 and a length shoert than 80bp
+obi grep -p "len(sequence)>=80 and sequence['COUNT']>=10" bat/cleaned_metadata_sequences bat/denoised_sequences
+
+
+#Clean the sequences from PCR/sequencing errors (sequence variants)
+obi clean -s MERGED_sample -r 0.05 -H bat/denoised_sequences bat/cleaned_sequences
+
+#Export cleaned sequences for use in BLAST
+#note may need to add the '-s MERGED_sample' argument for more than 1 sample
+obi clean -r 0.05 -H bat/denoised_sequences - > cleaned_sequences.fasta
+
+#Note here the output header has all the info (count included!) in it, but sepearted by spaces and semicolons, use sed to remove these and replace with '_'
+
+sed -e 's/ /_/g' inputfile > outputfile
+sed -e 's/;/_/g' inputfile > outputfile
+```
+
+## BLAST
+
+To process our files in BLAST we will need a reference database. The database I used was created by going to this [site](https://www.boldsystems.org) and downlaoding all insect CO1 barcodes into a .fas file.
+
+### Reference database - clean header
+A note about the above reference database: there is a space between the genus and species name. For blast, this isn't ideal and will truncate the header and then you'll be stuck with an annoying output. To solve this, replace the " " with a "_" using sed.
+
+```{bash}
+sed -e 's/ /_/g' ../Data/Bat_Data/reference_fasta.fas > ../Data/Bat_Data/reference_under.fas
+```
+
+
+This [script](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/03_Bat_Blast.ipynb) is a guide on how to get BLAST to work, but note that there are also some extra commands.Below I'll show the most relevant commands below.
+
+```{bash}
+bldir="/Applications/ncbi-blast-2.11.0+/bin/"
+
+#make blast database
+${bldir}makeblastdb \
+-in ../Data/Bat_Data/reference_under.fas \
+-dbtype nucl \
+-out ../Data/Bat_Data/reference
+
+#Convert fastq files to fasta files if necessary with the following command
+seqtk seq -a ../Data/Bat_Data/dereplicated.fastq > ../Data/Bat_Data/dereplicated.fasta
+
+#Run blast - note that you might want to do this not on your local machine as it is computationally heavy and takes forever and all the CPU
+${bldir}blastn \
+-db ../Data/Bat_Data/reference \
+-query ../Data/Bat_Data/dereplicated.fasta \
+-out ../Results/Bat/dereplicated_referenceu_blastn.tab \
+-outfmt 6 #6 will give tabulated output
+# Use outfmt '6 qseqid' to give full header in output -this is what we ended up wanting to do
+
+```
+
+## BLAST on MOX
+
+Because the computation time is extensive, running blast via mox was a great option. For the next ~30 files used can be found on Mox at skreling@mox.hyak.uw.edu:/gscratch/scrubbed/skreling. Here is the slurm [script](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/04_mox_bat_blast.sh) I used to complete the anlayses in Mox
+
+## R Analysis
+
+Congratulations, many headaches and moments of wanting to never touch genomics again, and you've got a final product that you can analyze in R. Why this is only a 3 unit class will forever be a mystery for me. I spent roughly 3 times as much on this class than any 5 unit class I've taken thus far. Here is an .rmd [file](https://github.com/fish546-2021/Sam-Metabarcoding/blob/main/Scripts/05.2_Bat_Blast_Table.Rmd) of some of the R analysis.
+
+## Results
+By far one of the largest struggles I've had in this class are trying to format the reference database correctly. If I had been able to format it correctly, I could have finished the entire OBITools workflow which I think would reduce the kinds of errors that I am seeing. The file I blasted was exported as a cleaned OBITools file which should have a count value and I got a new file format that gives me this value, but it just seems wrong. Soemthing I'm pretty sure is off with the number of reads and how theyre represented so right now I just hav eeverything aggregated by species and genus and then ignroed the count column bc it didn't make any sense. I have some figures that display relative number of reads and the taxa that represnet > 0.2%, 0.5%, and 1% of the total number of reads. More than that and figures became unmanageable and illegdible. See the file linked above for figure code. 
+
+
+```{r}
+#Load in the data and required libraries
+library(here)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(viridisLite)
+
+sample2 <- read.delim(here::here("Results","Bat","bat_S2_blast_cleaned_mox.tab"), header = F)
+
+#Extract species and genus names
+##Species
+sample2_with_species <- sample2
+colnames(sample2_with_species) <- c("query", "sseqid","pident", "length","mismatch","gaopen","qstart","qend","sstart","send","evalue","bitscore")
+sample2_with_species$sseqid <- as.character(sample2_with_species[,2])
+sample2_with_species$species <- sapply(strsplit(sample2_with_species[,2],"\\|"),`[`, 2)
+##Genus
+sample2_with_species$genus <- sapply(strsplit(sample2_with_species$species, "_"), `[`, 1)
+head(sample2_with_species$genus) #hurray this got what we wanted!
+genus.table <- as.data.frame(table(sample2_with_species$genus))
+
+# Create some plots
+
+ggplot(data=genus.table, aes(x="",y=Freq, fill=Var1))+geom_bar(stat="identity", width=1)+theme(legend.position = "bottom")
+
+#Create column with percent of reads
+genus.table$percentagediet <- genus.table$Freq/sum(genus.table$Freq)*100
+
+#Create Bar graph of reads greater than 1%
+ggplot(data=genus.table[genus.table$percentagediet>=1,], aes(x=Var1, y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(legend.position= "none",axis.text.x = element_text(angle=90, vjust = 0.35), panel.background = element_rect(fill="white"))+xlab("Genus") + ylab("Percent of Reads")
+
+#Create Pie chart of reads greater than 1%
+ggplot(data=genus.table[genus.table$percentagediet>=1,], aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+
+
+#Create a dataframe iwth the >=1% and a category 'other' that is the sum of the rest
+greater <- genus.table[genus.table$percentagediet>=1,]
+other <- (genus.table[genus.table$percentagediet<1,])
+sum.reads <- sum(other$Freq)
+sum.perc <- sum(other$percentagediet)
+
+greater<- rbind(greater,data.frame(Var1="Other", Freq=sum.reads, percentagediet=sum.perc))
+
+#Create Pie chart of reads greater than 1% m+ other
+ggplot(data=greater, aes(x="", y=percentagediet, fill=Var1))+geom_bar(stat="identity")+theme(axis.text.x = element_text(size=0), panel.background = element_rect(fill="white"), legend.position = "bottom")+xlab("Genus")+coord_polar("y", start=0)+labs(y="Percent of Reads", x="Genus",fill="Genus")
+```
+
